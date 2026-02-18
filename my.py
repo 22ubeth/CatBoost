@@ -4,27 +4,30 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 # ===============================
-# LOAD MODEL
+# LOAD MODEL DAN FEATURE NAMES
 # ===============================
 @st.cache_resource
 def load_model():
     return joblib.load("model_catboost.pkl")
 
+@st.cache_resource
+def load_features():
+    return joblib.load("feature_names.pkl")
+
 model = load_model()
+feature_names = load_features()
 
 # ===============================
 # LOAD DATASET UNTUK ENCODING
 # ===============================
 df = pd.read_csv("stroke.csv")
 
-# buat encoder untuk setiap kolom kategori
 encoders = {}
-
 cat_cols = df.select_dtypes(include=['object']).columns
 
 for col in cat_cols:
     le = LabelEncoder()
-    le.fit(df[col])   # fit encoder menggunakan dataset asli
+    le.fit(df[col])
     encoders[col] = le
 
 # ===============================
@@ -35,42 +38,18 @@ st.title("Prediksi Risiko Stroke")
 col1, col2 = st.columns(2)
 
 with col1:
-    gender = st.selectbox(
-        "Gender",
-        encoders["gender"].classes_
-    )
-
+    gender = st.selectbox("Gender", encoders["gender"].classes_)
     age = st.number_input("Age", 0, 120, 30)
-
     hypertension = st.selectbox("Hypertension", [0,1])
-
     heart_disease = st.selectbox("Heart Disease", [0,1])
-
-    ever_married = st.selectbox(
-        "Ever Married",
-        encoders["ever_married"].classes_
-    )
+    ever_married = st.selectbox("Ever Married", encoders["ever_married"].classes_)
 
 with col2:
-
-    work_type = st.selectbox(
-        "Work Type",
-        encoders["work_type"].classes_
-    )
-
-    Residence_type = st.selectbox(
-        "Residence Type",
-        encoders["Residence_type"].classes_
-    )
-
+    work_type = st.selectbox("Work Type", encoders["work_type"].classes_)
+    Residence_type = st.selectbox("Residence Type", encoders["Residence_type"].classes_)
     avg_glucose_level = st.number_input("Glucose Level", value=100.0)
-
     bmi = st.number_input("BMI", value=25.0)
-
-    smoking_status = st.selectbox(
-        "Smoking Status",
-        encoders["smoking_status"].classes_
-    )
+    smoking_status = st.selectbox("Smoking Status", encoders["smoking_status"].classes_)
 
 # ===============================
 # PREDICT
@@ -90,7 +69,11 @@ if st.button("Prediksi"):
         "smoking_status": encoders["smoking_status"].transform([smoking_status])[0],
     }
 
+    # buat dataframe
     features = pd.DataFrame([input_dict])
+
+    # pastikan urutan kolom sama persis
+    features = features[feature_names]
 
     prediction = model.predict(features)
 
