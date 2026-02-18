@@ -71,11 +71,11 @@ if st.button("Prediksi"):
 
     features = pd.DataFrame([input_dict])
 
-for col in feature_names:
-    if col not in features.columns:
-        features[col] = 0
+    for col in feature_names:
+        if col not in features.columns:
+            features[col] = 0
 
-features = features[feature_names]
+    features = features[feature_names]
 
 
     prediction = model.predict(features)
@@ -90,4 +90,5 @@ st.write(feature_names)
 
 st.write("Kolom dari input Streamlit:")
 st.write(features.columns.tolist())
+
 
