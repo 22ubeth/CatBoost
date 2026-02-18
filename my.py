@@ -81,3 +81,9 @@ if st.button("Prediksi"):
         st.error("Pasien Berisiko Stroke")
     else:
         st.success("Pasien Tidak Berisiko Stroke")
+
+st.write("Feature names dari model:")
+st.write(feature_names)
+
+st.write("Kolom dari input Streamlit:")
+st.write(features.columns.tolist())
