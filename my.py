@@ -1,7 +1,7 @@
 import streamlit as st
 import joblib
-import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 # ===============================
 # LOAD MODEL
@@ -13,135 +13,84 @@ def load_model():
 model = load_model()
 
 # ===============================
-# TITLE
+# LOAD DATASET UNTUK ENCODING
 # ===============================
-st.title("Prediksi Risiko Stroke Menggunakan Machine Learning")
+df = pd.read_csv("stroke.csv")
 
-st.write("Masukkan data pasien untuk memprediksi risiko stroke:")
+# buat encoder untuk setiap kolom kategori
+encoders = {}
+
+cat_cols = df.select_dtypes(include=['object']).columns
+
+for col in cat_cols:
+    le = LabelEncoder()
+    le.fit(df[col])   # fit encoder menggunakan dataset asli
+    encoders[col] = le
+
+# ===============================
+# STREAMLIT UI
+# ===============================
+st.title("Prediksi Risiko Stroke")
 
 col1, col2 = st.columns(2)
 
-# ===============================
-# INPUT FEATURES
-# ===============================
 with col1:
-
     gender = st.selectbox(
         "Gender",
-        ["Male", "Female", "Other"]
+        encoders["gender"].classes_
     )
 
-    age = st.number_input(
-        "Age",
-        min_value=0,
-        max_value=120,
-        value=30
-    )
+    age = st.number_input("Age", 0, 120, 30)
 
-    hypertension = st.selectbox(
-        "Hypertension",
-        [0, 1]
-    )
+    hypertension = st.selectbox("Hypertension", [0,1])
 
-    heart_disease = st.selectbox(
-        "Heart Disease",
-        [0, 1]
-    )
+    heart_disease = st.selectbox("Heart Disease", [0,1])
 
     ever_married = st.selectbox(
         "Ever Married",
-        ["Yes", "No"]
+        encoders["ever_married"].classes_
     )
-
 
 with col2:
 
     work_type = st.selectbox(
         "Work Type",
-        ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
+        encoders["work_type"].classes_
     )
 
     Residence_type = st.selectbox(
         "Residence Type",
-        ["Urban", "Rural"]
+        encoders["Residence_type"].classes_
     )
 
-    avg_glucose_level = st.number_input(
-        "Average Glucose Level",
-        min_value=0.0,
-        value=100.0
-    )
+    avg_glucose_level = st.number_input("Glucose Level", value=100.0)
 
-    bmi = st.number_input(
-        "BMI",
-        min_value=0.0,
-        value=25.0
-    )
+    bmi = st.number_input("BMI", value=25.0)
 
     smoking_status = st.selectbox(
         "Smoking Status",
-        ["formerly smoked", "never smoked", "smokes", "Unknown"]
+        encoders["smoking_status"].classes_
     )
 
 # ===============================
-# ENCODING (SAMA SEPERTI LABELENCODER)
+# PREDICT
 # ===============================
+if st.button("Prediksi"):
 
-gender_map = {
-    "Female": 0,
-    "Male": 1,
-    "Other": 2
-}
-
-ever_married_map = {
-    "No": 0,
-    "Yes": 1
-}
-
-work_type_map = {
-    "Govt_job": 0,
-    "Never_worked": 1,
-    "Private": 2,
-    "Self-employed": 3,
-    "children": 4
-}
-
-Residence_type_map = {
-    "Rural": 0,
-    "Urban": 1
-}
-
-smoking_status_map = {
-    "Unknown": 0,
-    "formerly smoked": 1,
-    "never smoked": 2,
-    "smokes": 3
-}
-
-# encode
-gender_encoded = gender_map[gender]
-ever_married_encoded = ever_married_map[ever_married]
-work_type_encoded = work_type_map[work_type]
-Residence_type_encoded = Residence_type_map[Residence_type]
-smoking_status_encoded = smoking_status_map[smoking_status]
-
-# ===============================
-# PREDICT BUTTON
-# ===============================
-if st.button("Prediksi Stroke"):
-
-    features = pd.DataFrame([{
-        "gender": gender_encoded,
+    input_dict = {
+        "gender": encoders["gender"].transform([gender])[0],
         "age": age,
         "hypertension": hypertension,
         "heart_disease": heart_disease,
-        "ever_married": ever_married_encoded,
-        "work_type": work_type_encoded,
-        "Residence_type": Residence_type_encoded,
+        "ever_married": encoders["ever_married"].transform([ever_married])[0],
+        "work_type": encoders["work_type"].transform([work_type])[0],
+        "Residence_type": encoders["Residence_type"].transform([Residence_type])[0],
         "avg_glucose_level": avg_glucose_level,
         "bmi": bmi,
-        "smoking_status": smoking_status_encoded
-    }])
+        "smoking_status": encoders["smoking_status"].transform([smoking_status])[0],
+    }
+
+    features = pd.DataFrame([input_dict])
 
     prediction = model.predict(features)
 
