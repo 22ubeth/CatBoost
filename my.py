@@ -1,42 +1,18 @@
 import streamlit as st
 import joblib
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
 
-# ===============================
-# LOAD MODEL DAN FEATURE NAMES
-# ===============================
+# LOAD SEMUA FILE TRAINING
 @st.cache_resource
-def load_model():
-    return joblib.load("model_catboost.pkl")
+def load_all():
+    model = joblib.load("model_catboost.pkl")
+    imputer = joblib.load("imputer.pkl")
+    encoders = joblib.load("encoders.pkl")
+    feature_names = joblib.load("feature_names.pkl")
+    return model, imputer, encoders, feature_names
 
-@st.cache_resource
-def load_features():
-    return joblib.load("feature_names.pkl")
+model, imputer, encoders, feature_names = load_all()
 
-model = load_model()
-feature_names = load_features()
-
-# ===============================
-# LOAD DATASET UNTUK ENCODING
-# ===============================
-df = pd.read_csv("stroke.csv")
-
-# DROP ID jika ada
-if "id" in df.columns:
-    df = df.drop(columns=["id"])
-
-encoders = {}
-cat_cols = df.select_dtypes(include=['object']).columns
-
-for col in cat_cols:
-    le = LabelEncoder()
-    le.fit(df[col])
-    encoders[col] = le
-
-# ===============================
-# STREAMLIT UI
-# ===============================
 st.title("Prediksi Risiko Stroke")
 
 col1, col2 = st.columns(2)
@@ -55,12 +31,9 @@ with col2:
     bmi = st.number_input("BMI", value=25.0)
     smoking_status = st.selectbox("Smoking Status", encoders["smoking_status"].classes_)
 
-# ===============================
-# PREDICT
-# ===============================
 if st.button("Prediksi"):
 
-    input_dict = {
+    data = {
         "gender": encoders["gender"].transform([gender])[0],
         "age": age,
         "hypertension": hypertension,
@@ -73,25 +46,14 @@ if st.button("Prediksi"):
         "smoking_status": encoders["smoking_status"].transform([smoking_status])[0],
     }
 
-    features = pd.DataFrame([input_dict])
+    features = pd.DataFrame([data])
 
-    # FIX UTAMA: sesuaikan hanya fitur yang benar-benar ada
-    valid_features = [col for col in feature_names if col != "id"]
+    # imputasi (WAJIB karena training pakai imputer)
+    features = pd.DataFrame(imputer.transform(features), columns=feature_names)
 
-    features = features[valid_features]
+    prediction = model.predict(features)[0]
 
-    prediction = model.predict(features)
-
-    if prediction[0] == 1:
+    if prediction == 1:
         st.error("Pasien Berisiko Stroke")
     else:
         st.success("Pasien Tidak Berisiko Stroke")
-
-st.write("Feature names dari model:")
-st.write(feature_names)
-
-st.write("Kolom dari input Streamlit:")
-st.write(features.columns.tolist())
-
-
-
