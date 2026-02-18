@@ -130,24 +130,22 @@ smoking_status_encoded = smoking_status_map[smoking_status]
 # ===============================
 if st.button("Prediksi Stroke"):
 
-    features = np.array([[
-        gender_encoded,
-        age,
-        hypertension,
-        heart_disease,
-        ever_married_encoded,
-        work_type_encoded,
-        Residence_type_encoded,
-        avg_glucose_level,
-        bmi,
-        smoking_status_encoded
-    ]])
+    features = pd.DataFrame([{
+        "gender": gender_encoded,
+        "age": age,
+        "hypertension": hypertension,
+        "heart_disease": heart_disease,
+        "ever_married": ever_married_encoded,
+        "work_type": work_type_encoded,
+        "Residence_type": Residence_type_encoded,
+        "avg_glucose_level": avg_glucose_level,
+        "bmi": bmi,
+        "smoking_status": smoking_status_encoded
+    }])
 
     prediction = model.predict(features)
 
-    result = "Berisiko Stroke" if prediction[0] == 1 else "Tidak Berisiko Stroke"
-
     if prediction[0] == 1:
-        st.error(f"Hasil Prediksi: {result}")
+        st.error("Pasien Berisiko Stroke")
     else:
-        st.success(f"Hasil Prediksi: {result}")
+        st.success("Pasien Tidak Berisiko Stroke")
