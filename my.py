@@ -69,11 +69,14 @@ if st.button("Prediksi"):
         "smoking_status": encoders["smoking_status"].transform([smoking_status])[0],
     }
 
-    # buat dataframe
     features = pd.DataFrame([input_dict])
 
-    # pastikan urutan kolom sama persis
-    features = features[feature_names]
+for col in feature_names:
+    if col not in features.columns:
+        features[col] = 0
+
+features = features[feature_names]
+
 
     prediction = model.predict(features)
 
@@ -87,3 +90,4 @@ st.write(feature_names)
 
 st.write("Kolom dari input Streamlit:")
 st.write(features.columns.tolist())
+
