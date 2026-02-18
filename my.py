@@ -1,92 +1,153 @@
 import streamlit as st
-import pandas as pd
+import joblib
 import numpy as np
-import pickle
-from sklearn.preprocessing import LabelEncoder
-from sklearn.impute import SimpleImputer
+import pandas as pd
 
 # ===============================
 # LOAD MODEL
 # ===============================
-model = pickle.load(open("model_catboost.pkl", "rb"))
+@st.cache_resource
+def load_model():
+    return joblib.load("model_catboost.pkl")
+
+model = load_model()
 
 # ===============================
-# LOAD DATASET (untuk encoder & imputer)
+# TITLE
 # ===============================
-df = pd.read_csv("stroke.csv")
+st.title("Prediksi Risiko Stroke Menggunakan Machine Learning")
 
-# simpan encoder untuk setiap kolom kategori
-encoders = {}
-cat_cols = df.select_dtypes(include=['object']).columns
+st.write("Masukkan data pasien untuk memprediksi risiko stroke:")
 
-for col in cat_cols:
-    le = LabelEncoder()
-    df[col] = le.fit_transform(df[col])
-    encoders[col] = le
-
-# imputasi median
-num_cols = df.select_dtypes(include=['int64','float64']).columns
-imputer = SimpleImputer(strategy="median")
-df[num_cols] = imputer.fit_transform(df[num_cols])
+col1, col2 = st.columns(2)
 
 # ===============================
-# STREAMLIT UI
+# INPUT FEATURES
+# ===============================
+with col1:
+
+    gender = st.selectbox(
+        "Gender",
+        ["Male", "Female", "Other"]
+    )
+
+    age = st.number_input(
+        "Age",
+        min_value=0,
+        max_value=120,
+        value=30
+    )
+
+    hypertension = st.selectbox(
+        "Hypertension",
+        [0, 1]
+    )
+
+    heart_disease = st.selectbox(
+        "Heart Disease",
+        [0, 1]
+    )
+
+    ever_married = st.selectbox(
+        "Ever Married",
+        ["Yes", "No"]
+    )
+
+
+with col2:
+
+    work_type = st.selectbox(
+        "Work Type",
+        ["Private", "Self-employed", "Govt_job", "children", "Never_worked"]
+    )
+
+    Residence_type = st.selectbox(
+        "Residence Type",
+        ["Urban", "Rural"]
+    )
+
+    avg_glucose_level = st.number_input(
+        "Average Glucose Level",
+        min_value=0.0,
+        value=100.0
+    )
+
+    bmi = st.number_input(
+        "BMI",
+        min_value=0.0,
+        value=25.0
+    )
+
+    smoking_status = st.selectbox(
+        "Smoking Status",
+        ["formerly smoked", "never smoked", "smokes", "Unknown"]
+    )
+
+# ===============================
+# ENCODING (SAMA SEPERTI LABELENCODER)
 # ===============================
 
-st.title("Prediksi Risiko Stroke")
-st.write("Aplikasi ini memprediksi risiko stroke menggunakan model CatBoost")
-
-st.subheader("Masukkan Data Pasien")
-
-# input user
-gender = st.selectbox("Gender", encoders['gender'].classes_)
-
-age = st.number_input("Age", min_value=0, max_value=120, value=30)
-
-hypertension = st.selectbox("Hypertension", [0,1])
-
-heart_disease = st.selectbox("Heart Disease", [0,1])
-
-ever_married = st.selectbox("Ever Married", encoders['ever_married'].classes_)
-
-work_type = st.selectbox("Work Type", encoders['work_type'].classes_)
-
-Residence_type = st.selectbox("Residence Type", encoders['Residence_type'].classes_)
-
-avg_glucose_level = st.number_input("Average Glucose Level", value=100.0)
-
-bmi = st.number_input("BMI", value=25.0)
-
-smoking_status = st.selectbox("Smoking Status", encoders['smoking_status'].classes_)
-
-# ===============================
-# ENCODE INPUT
-# ===============================
-
-input_dict = {
-    "gender": encoders['gender'].transform([gender])[0],
-    "age": age,
-    "hypertension": hypertension,
-    "heart_disease": heart_disease,
-    "ever_married": encoders['ever_married'].transform([ever_married])[0],
-    "work_type": encoders['work_type'].transform([work_type])[0],
-    "Residence_type": encoders['Residence_type'].transform([Residence_type])[0],
-    "avg_glucose_level": avg_glucose_level,
-    "bmi": bmi,
-    "smoking_status": encoders['smoking_status'].transform([smoking_status])[0],
+gender_map = {
+    "Female": 0,
+    "Male": 1,
+    "Other": 2
 }
 
-input_df = pd.DataFrame([input_dict])
+ever_married_map = {
+    "No": 0,
+    "Yes": 1
+}
+
+work_type_map = {
+    "Govt_job": 0,
+    "Never_worked": 1,
+    "Private": 2,
+    "Self-employed": 3,
+    "children": 4
+}
+
+Residence_type_map = {
+    "Rural": 0,
+    "Urban": 1
+}
+
+smoking_status_map = {
+    "Unknown": 0,
+    "formerly smoked": 1,
+    "never smoked": 2,
+    "smokes": 3
+}
+
+# encode
+gender_encoded = gender_map[gender]
+ever_married_encoded = ever_married_map[ever_married]
+work_type_encoded = work_type_map[work_type]
+Residence_type_encoded = Residence_type_map[Residence_type]
+smoking_status_encoded = smoking_status_map[smoking_status]
 
 # ===============================
 # PREDICT BUTTON
 # ===============================
+if st.button("Prediksi Stroke"):
 
-if st.button("Predict"):
+    features = np.array([[
+        gender_encoded,
+        age,
+        hypertension,
+        heart_disease,
+        ever_married_encoded,
+        work_type_encoded,
+        Residence_type_encoded,
+        avg_glucose_level,
+        bmi,
+        smoking_status_encoded
+    ]])
 
-    prediction = model.predict(input_df)[0]
+    prediction = model.predict(features)
 
-    if prediction == 1:
-        st.error("Pasien Berisiko Stroke")
+    result = "Berisiko Stroke" if prediction[0] == 1 else "Tidak Berisiko Stroke"
+
+    if prediction[0] == 1:
+        st.error(f"Hasil Prediksi: {result}")
     else:
-        st.success("Pasien Tidak Berisiko Stroke")
+        st.success(f"Hasil Prediksi: {result}")
