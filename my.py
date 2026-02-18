@@ -22,6 +22,10 @@ feature_names = load_features()
 # ===============================
 df = pd.read_csv("stroke.csv")
 
+# DROP ID jika ada
+if "id" in df.columns:
+    df = df.drop(columns=["id"])
+
 encoders = {}
 cat_cols = df.select_dtypes(include=['object']).columns
 
@@ -71,12 +75,10 @@ if st.button("Prediksi"):
 
     features = pd.DataFrame([input_dict])
 
-    for col in feature_names:
-        if col not in features.columns:
-            features[col] = 0
+    # FIX UTAMA: sesuaikan hanya fitur yang benar-benar ada
+    valid_features = [col for col in feature_names if col != "id"]
 
-    features = features[feature_names]
-
+    features = features[valid_features]
 
     prediction = model.predict(features)
 
@@ -90,5 +92,6 @@ st.write(feature_names)
 
 st.write("Kolom dari input Streamlit:")
 st.write(features.columns.tolist())
+
 
 
